@@ -1,35 +1,68 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
+//unix系统的标准库
 #include <unistd.h>
+//套接字编程
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
-#define SIZE 1024
+void error_handling(char * message);
+
+#define BUF_SIZE 1024
 int main(){
-    int clnt_sock;
-    int message_len;
-    char message[SIZE];
-    struct sockaddr_in clnt_adr;
-    socklen_t clnt_adr_sz;
-    clnt_sock = socket(PF_INET,SOCK_STREAM,0);
-    if(clnt_sock == -1){
-        printf("socket() error");
+    int socket_server;
+    int str_len;
+    int recv_cnt;
+    char message[BUF_SIZE];
+    struct sockaddr_in socket_addr;
+    
+    //创建socket套接字
+    socket_server = socket(PF_INET,SOCK_STREAM,0);
+    if(socket<0){
+        printf("socket() error\n");
     }
-    memset(&clnt_adr,0,sizeof(clnt_adr));
-    clnt_adr.sin_family = AF_INET;
-    clnt_adr.sin_addr.s_addr =inet_addr("127.0.0.1");
-    clnt_adr.sin_port = htons(8080);
+    memset(&socket_addr,0,sizeof(socket_addr));
+    socket_addr.sin_family = AF_INET;
+    socket_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    socket_addr.sin_port = htons(8080);
 
-    //尝试连接客户端
-    if(connect(clnt_sock,(struct sockaddr*)&clnt_adr,sizeof(clnt_adr))){
-        printf("connect() error");
-        exit(1);
+    if(connect(socket_server,(struct sockaddr*)&socket_addr,sizeof(socket_addr))){
+        printf("connect() error\n");
     }
-    //输出一下来自服务器的信息
-    message_len = read(clnt_sock,message,SIZE-1);
-    message[SIZE] = 0;
-    printf("Message from server:%s",message);
-    close(clnt_sock);
-    return 0;
+
+    while(1){
+    fputs("input message (Q to quit): ",stdout);
+    fgets(message,BUF_SIZE,stdin);
+    if(!strcmp(message,"q\n") || !strcmp(message,"Q\n")){
+        break;
+    }
+// printf("Message :%s",message);
+    str_len = write(socket_server,message,strlen(message));
+
+    if(str_len<0){
+        printf("read() error\n");
+    }
+    int recv_len = 0;
+    while(recv_len<str_len){
+        recv_cnt = read(socket_server,&message[recv_len],BUF_SIZE-1);
+        if(recv_cnt<0){
+            printf("read() error");
+        }
+        recv_len += recv_cnt;
+    }
+    message[recv_len] = 0;
+    printf("Message from server :%s",message);
+    }
+    
+    close(socket_server);
+}
+
+
+
+void error_handling(char* message){
+  fputs(message,stderr);
+  fputc('\n',stderr);
+  exit(1);
+
 }
